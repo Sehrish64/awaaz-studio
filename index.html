@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Awaaz Studio – free Gemini text to speech</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#14202b;--paper:#eef1f4;--panel:#fff;--line:#c9d1d9;--sig:#0f8b8d;--amber:#f2a33a}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 "Bricolage Grotesque",system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 18px 60px}
+h1{font-size:clamp(2.2rem,7vw,3.8rem);line-height:1;margin:0 0 6px;font-weight:800;letter-spacing:-.03em}
+.sub{color:#4a5a68;margin:0 0 22px}
+.wave{display:flex;gap:3px;align-items:center;height:44px;margin:0 0 22px}
+.wave i{flex:1;background:var(--ink);border-radius:2px;height:20%;transition:height .15s}
+.wave.on i{background:var(--sig);animation:b 1s ease-in-out infinite}
+@keyframes b{50%{height:100%}}@media(prefers-reduced-motion:reduce){.wave.on i{animation:none;height:60%}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+label{display:block;font-weight:600;margin:0 0 4px}
+input,select,textarea{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+textarea{min-height:170px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:600px){.row{grid-template-columns:1fr}}
+.seg{display:flex;border:1px solid var(--ink);border-radius:6px;overflow:hidden;width:max-content;margin-bottom:12px}
+.seg button{border:0;background:#fff;padding:7px 16px;font:inherit;cursor:pointer}.seg button.on{background:var(--ink);color:#fff}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+button.go{background:var(--sig);color:#fff;border:0;border-radius:6px;padding:11px 22px;font:600 1rem inherit;font-family:inherit;cursor:pointer}
+button.alt{background:#fff;border:1px solid var(--ink);border-radius:6px;padding:11px 18px;font:inherit;cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--amber);outline-offset:1px}
+#msg{min-height:1.4em;margin:8px 0;color:#7a2d00}audio{width:100%;margin-top:10px}
+small{color:#4a5a68}.hide{display:none}
+</style></head><body><main>
+<h1>Awaaz Studio</h1>
+<p class="sub">Write a script, pick a voice, download the audio. Runs in your browser with your own Gemini API key. Not a Google product.</p>
+<div class="wave" id="wave" aria-hidden="true"></div>
+
+<div class="panel"><label for="key">Gemini API key</label>
+<input id="key" type="password" autocomplete="off" placeholder="Paste your key from aistudio.google.com/apikey">
+<small>Saved only in this browser. Sent only to Google.</small></div>
+
+<div class="panel">
+<div class="seg" role="group" aria-label="Mode"><button id="m1" class="on">One voice</button><button id="m2">Two voices</button></div>
+<div class="row">
+<div><label for="model">Model</label><select id="model">
+<option>gemini-3.1-flash-tts-preview</option><option>gemini-2.5-flash-preview-tts</option><option>gemini-2.5-pro-preview-tts</option></select></div>
+<div><label for="style">Style (optional)</label><input id="style" placeholder="Slow, dramatic storyteller"></div>
+<div><label for="v1" id="l1">Voice</label><select id="v1"></select></div>
+<div id="b2" class="hide"><label for="v2" id="l2">Second voice</label><select id="v2"></select></div>
+<div id="n1" class="hide"><label for="s1">Speaker 1 name</label><input id="s1" value="Maa"></div>
+<div id="n2" class="hide"><label for="s2">Speaker 2 name</label><input id="s2" value="Magarmach"></div>
+</div></div>
+
+<div class="panel"><label for="txt" id="lt">Script</label>
+<textarea id="txt" placeholder="Magarmach chupke se unke peeche aaya..."></textarea>
+<small id="hint" class="hide">Start each line with the speaker name and a colon, like  Maa: Mera bacha wapas do.</small>
+<div class="btns"><button class="go" id="go">Generate audio</button><button class="alt" id="ur">Roman Urdu → Urdu script</button></div>
+<div id="msg" role="status"></div>
+<audio id="player" controls class="hide"></audio>
+<div class="btns"><button class="alt hide" id="dl">Download WAV</button></div></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const VOICES="Zephyr Puck Charon Kore Fenrir Leda Orus Aoede Callirrhoe Autonoe Enceladus Iapetus Umbriel Algieba Despina Erinome Algenib Rasalgethi Laomedeia Achernar Alnilam Schedar Gacrux Pulcherrima Achird Zubenelgenubi Vindemiatrix Sadachbia Sadaltager Sulafat".split(" ");
+for(const s of [$("v1"),$("v2")])VOICES.forEach(v=>s.add(new Option(v)));
+$("v1").value="Kore";$("v2").value="Puck";
+$("wave").innerHTML="<i></i>".repeat(48);[...$("wave").children].forEach((e,i)=>{e.style.height=(15+Math.abs(Math.sin(i*.7))*70)+"%";e.style.animationDelay=(i*60)+"ms"});
+try{$("key").value=localStorage.getItem("gkey")||""}catch(e){}
+$("key").onchange=()=>{try{localStorage.setItem("gkey",$("key").value.trim())}catch(e){}};
+let dual=false,blobUrl=null;
+function mode(d){dual=d;$("m1").classList.toggle("on",!d);$("m2").classList.toggle("on",d);
+["b2","n1","n2","hint"].forEach(i=>$(i).classList.toggle("hide",!d));$("l1").textContent=d?"Voice for speaker 1":"Voice"}
+$("m1").onclick=()=>mode(false);$("m2").onclick=()=>mode(true);
+const msg=t=>$("msg").textContent=t||"";
+async function api(model,body){
+ const k=$("key").value.trim();if(!k)throw new Error("Paste your Gemini API key first.");
+ const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":k},body:JSON.stringify(body)});
+ const j=await r.json();if(!r.ok)throw new Error(j.error?.message||("Request failed: "+r.status));return j}
+function chunks(t,max=1500){const out=[];let cur="";
+ for(const p of t.split(/(?<=[.!?۔\n])\s+/)){if((cur+" "+p).length>max&&cur){out.push(cur);cur=p}else cur=cur?cur+" "+p:p}
+ if(cur)out.push(cur);return out}
+function speech(){return dual?{multiSpeakerVoiceConfig:{speakerVoiceConfigs:[
+ {speaker:$("s1").value.trim(),voiceConfig:{prebuiltVoiceConfig:{voiceName:$("v1").value}}},
+ {speaker:$("s2").value.trim(),voiceConfig:{prebuiltVoiceConfig:{voiceName:$("v2").value}}}]}}
+ :{voiceConfig:{prebuiltVoiceConfig:{voiceName:$("v1").value}}}}
+function prompt(t){const st=$("style").value.trim();
+ if(dual)return `TTS the following conversation between ${$("s1").value.trim()} and ${$("s2").value.trim()}${st?` (delivery: ${st})`:""}:\n${t}`;
+ return st?`Say in this style: ${st}\n\n${t}`:t}
+function b64(s){const b=atob(s),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}
+function wav(pcm){const h=new DataView(new ArrayBuffer(44));const w=(o,s)=>[...s].forEach((c,i)=>h.setUint8(o+i,c.charCodeAt(0)));
+ w(0,"RIFF");h.setUint32(4,36+pcm.length,true);w(8,"WAVEfmt ");h.setUint32(16,16,true);h.setUint16(20,1,true);h.setUint16(22,1,true);
+ h.setUint32(24,24000,true);h.setUint32(28,48000,true);h.setUint16(32,2,true);h.setUint16(34,16,true);w(36,"data");h.setUint32(40,pcm.length,true);
+ return new Blob([h,pcm],{type:"audio/wav"})}
+$("go").onclick=async()=>{
+ const text=$("txt").value.trim();if(!text){msg("Write a script first.");return}
+ $("go").disabled=true;$("wave").classList.add("on");const parts=[];
+ try{const cs=dual?[text]:chunks(text);
+  for(let i=0;i<cs.length;i++){msg(`Generating part ${i+1} of ${cs.length}...`);
+   const j=await api($("model").value,{contents:[{parts:[{text:prompt(cs[i])}]}],generationConfig:{responseModalities:["AUDIO"],speechConfig:speech()}});
+   const d=j.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;if(!d)throw new Error("No audio returned. Try a shorter script or another model.");parts.push(b64(d))}
+  const pcm=new Uint8Array(parts.reduce((n,p)=>n+p.length,0));let o=0;parts.forEach(p=>{pcm.set(p,o);o+=p.length});
+  if(blobUrl)URL.revokeObjectURL(blobUrl);blobUrl=URL.createObjectURL(wav(pcm));
+  $("player").src=blobUrl;$("player").classList.remove("hide");$("dl").classList.remove("hide");$("player").play();msg("Done.");
+ }catch(e){msg(e.message)}finally{$("go").disabled=false;$("wave").classList.remove("on")}};
+$("dl").onclick=()=>{const a=document.createElement("a");a.href=blobUrl;a.download="awaaz.wav";a.click()};
+$("ur").onclick=async()=>{const t=$("txt").value.trim();if(!t)return msg("Write a script first.");
+ $("ur").disabled=true;msg("Converting...");
+ try{const j=await api("gemini-2.5-flash",{contents:[{parts:[{text:"Convert this Roman Urdu to Urdu script. Return only the converted text:\n"+t}]}]});
+  $("txt").value=j.candidates[0].content.parts[0].text.trim();msg("Converted.")}catch(e){msg(e.message)}finally{$("ur").disabled=false}};
+</script></body></html>
